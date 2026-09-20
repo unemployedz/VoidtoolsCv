@@ -1,0 +1,7 @@
+src/payload_blob.h
+src/cfg_blob.h
+output/
+build/
+*.obj
+*.pdb
+*.ilk
