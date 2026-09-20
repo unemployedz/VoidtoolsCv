@@ -5,7 +5,7 @@ ROOT="$(pwd)"
 
 echo "== toolchain =="
 sudo apt update
-sudo apt install -y g++-mingw-w64-x86-64-posix git python3-pip
+sudo apt install -y g++-mingw-w64-x86-64-posix git python3-pip wine64
 pip install --quiet pycryptodome
 
 echo "== test dll =="
@@ -35,11 +35,7 @@ for cand in \
     "$ROOT/donut/donut" \
     "$ROOT/donut/donut.exe" \
     "$ROOT/donut/bin/donut" \
-    "$ROOT/donut/bin/donut.exe" \
-    "$ROOT/donut/Release/donut" \
-    "$ROOT/donut/Release/donut.exe" \
-    "$ROOT/donut/x64/Release/donut" \
-    "$ROOT/donut/x64/Release/donut.exe"
+    "$ROOT/donut/bin/donut.exe"
 do
     if [ -f "$cand" ]; then
         DONUT="$cand"
@@ -59,11 +55,15 @@ if [ -z "$DONUT" ]; then
 fi
 
 echo "using donut: $DONUT"
-chmod +x "$DONUT" || true
 
 echo "== convert =="
 cd "$ROOT"
-"$DONUT" -i test.dll -o payload.bin -e 3 -b 2 -a 2
+if [[ "$DONUT" == *.exe ]]; then
+    WINEDEBUG=-all wine64 "$DONUT" -i test.dll -o payload.bin -e 3 -b 2 -a 2
+else
+    chmod +x "$DONUT" || true
+    "$DONUT" -i test.dll -o payload.bin -e 3 -b 2 -a 2
+fi
 
 ls -la payload.bin
 echo
